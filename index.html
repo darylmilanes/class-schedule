@@ -35,6 +35,30 @@
         textarea {
             font-family: 'Inter', sans-serif;
         }
+
+        /* Simple modal styles for the startup choice */
+        .mode-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2,6,23,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 1rem;
+        }
+        .mode-modal {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), #fff);
+            border-radius: 12px;
+            padding: 1.25rem;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .mode-modal .buttons { display:flex; gap:0.75rem; margin-top:0.75rem; }
+        .mode-modal .key-row { margin-top:0.75rem; display:none; gap:0.5rem; align-items:center; }
+
     </style>
     <!--
     Tailwind JIT Configuration
@@ -61,6 +85,25 @@
     </script>
 </head>
 <body class="bg-custom-bg text-custom-text">
+
+    <!-- Startup Mode Modal (View / Edit) -->
+    <div id="mode-modal-backdrop" class="mode-modal-backdrop" style="display:none;">
+        <div class="mode-modal">
+            <h2 class="text-lg font-bold">How would you like to open the schedule?</h2>
+            <p class="text-sm text-custom-text-secondary mt-2">Choose View to browse only. Choose Edit to enable reminders and editing (requires a key).</p>
+            <div class="buttons">
+                <button id="mode-view-btn" class="py-2 px-4 rounded-full bg-gray-100 text-custom-text-secondary font-semibold">View</button>
+                <button id="mode-edit-btn" class="py-2 px-4 rounded-full bg-custom-primary text-white font-semibold">Edit</button>
+            </div>
+
+            <div class="key-row" id="mode-key-row">
+                <input id="mode-key-input" type="password" class="flex-1 p-2 rounded border" placeholder="Enter key" />
+                <button id="mode-key-confirm" class="py-2 px-3 rounded bg-green-600 text-white font-semibold">Confirm</button>
+            </div>
+
+            <p id="mode-error" class="text-sm text-red-600 mt-2" style="display:none;">Wrong key. Try again.</p>
+        </div>
+    </div>
 
     <!-- Main App Container -->
     <div class="w-full max-w-2xl mx-auto min-h-screen">
@@ -134,6 +177,7 @@
         let currentDay = '';
         let expandedCardId = null;
         let reminders = {};
+        let mode = null; // 'view' or 'edit' - set by startup modal
 
         // --- LocalStorage Functions ---
         const loadReminders = () => {
@@ -275,7 +319,6 @@
             }
 
             // Determine class time state
-            // If viewing today, use precise time-based state; otherwise map by dayRelation
             let state;
             if (dayRelation === 'today') {
                 state = getClassTimeState(classInfo, nowPHT, todayString); // 'past'|'current'|'upcoming'
@@ -331,30 +374,9 @@
                     iconClasses = 'text-custom-primary/70';
             }
 
-            return `
-                <div class="${wrapperClasses}">
-                    <div 
-                        class="${innerClasses}"
-                        data-class-id="${id}"
-                    >
-                        <h3 class="${titleClasses}">${subject}</h3>
-                        <div class="${textClasses}">
-                            <div class="flex items-center space-x-3">
-                                ${IconClock(`w-5 h-5 ${iconClasses}`)}
-                                <span>${time}</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                ${IconMapPin(`w-5 h-5 ${iconClasses}`)}
-                                <span>${location}</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                ${IconUser(`w-5 h-5 ${iconClasses}`)}
-                                <span>${instructor}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Expanded Section (unchanged) -->
+            // Build the HTML and ONLY include the editable expanded section when mode === 'edit'
+            const editableSection = (mode === 'edit') ? `
+                    <!-- Expanded Section (edit mode) -->
                     <div 
                         class="expandable-content overflow-hidden transition-all duration-300 ease-in-out"
                         style="max-height: ${isExpanded ? '500px' : '0'}"
@@ -377,7 +399,31 @@
                                 Save
                             </button>
                         </div>
+                    </div>` : '';
+
+            return `
+                <div class="${wrapperClasses}">
+                    <div 
+                        class="${innerClasses}"
+                        data-class-id="${id}"
+                    >
+                        <h3 class="${titleClasses}">${subject}</h3>
+                        <div class="${textClasses}">
+                            <div class="flex items-center space-x-3">
+                                ${IconClock(`w-5 h-5 ${iconClasses}`)}
+                                <span>${time}</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${IconMapPin(`w-5 h-5 ${iconClasses}`)}
+                                <span>${location}</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${IconUser(`w-5 h-5 ${iconClasses}`)}
+                                <span>${instructor}</span>
+                            </div>
+                        </div>
                     </div>
+                    ${editableSection}
                 </div>`;
         };
 
@@ -476,6 +522,11 @@
             const card = e.target.closest('.class-card');
             const saveButton = e.target.closest('.save-btn');
 
+            // If not in edit mode, do not allow expanding or saving
+            if (mode !== 'edit') {
+                return; // read-only view
+            }
+
             if (saveButton) {
                 // --- Handle Save Button Click ---
                 const classId = parseInt(saveButton.dataset.classId);
@@ -508,6 +559,45 @@
             }
         };
 
+        // --- Modal / Mode logic ---
+        const openModeModal = () => {
+            const backdrop = document.getElementById('mode-modal-backdrop');
+            backdrop.style.display = 'flex';
+        };
+        const closeModeModal = () => {
+            const backdrop = document.getElementById('mode-modal-backdrop');
+            backdrop.style.display = 'none';
+        };
+
+        const selectViewMode = () => {
+            mode = 'view';
+            expandedCardId = null;
+            closeModeModal();
+            renderApp();
+        };
+
+        const attemptEditMode = () => {
+            const keyInputRow = document.getElementById('mode-key-row');
+            const errorEl = document.getElementById('mode-error');
+            // Show the key input row to allow entering key (pre-filled with default)
+            keyInputRow.style.display = 'flex';
+            errorEl.style.display = 'none';
+        };
+
+        const confirmEditKey = () => {
+            const keyInput = document.getElementById('mode-key-input');
+            const errorEl = document.getElementById('mode-error');
+            const entered = (keyInput && keyInput.value) ? keyInput.value.trim() : '';
+            const DEFAULT_KEY = '9000';
+            if (entered === DEFAULT_KEY) {
+                mode = 'edit';
+                closeModeModal();
+                renderApp();
+            } else {
+                errorEl.style.display = 'block';
+            }
+        };
+
         /**
          * Initializes the application
          */
@@ -527,7 +617,19 @@
             
             const scheduleViewContainer = document.getElementById('schedule-view-container');
             scheduleViewContainer.addEventListener('click', onCardClick);
-            
+
+            // Modal button wiring
+            const viewBtn = document.getElementById('mode-view-btn');
+            const editBtn = document.getElementById('mode-edit-btn');
+            const keyConfirm = document.getElementById('mode-key-confirm');
+
+            viewBtn.addEventListener('click', selectViewMode);
+            editBtn.addEventListener('click', attemptEditMode);
+            keyConfirm.addEventListener('click', confirmEditKey);
+
+            // Show modal on load
+            openModeModal();
+
             // Perform the initial render
             renderApp();
         };
