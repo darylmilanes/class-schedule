@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Class Schedule</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Google Font "Inter" -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafeff; /* Set body background */
+        }
+        
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Hide scrollbar for IE, Edge and Firefox */
+        body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Ensure textarea has the right font */
+        textarea {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <!--
+    Tailwind JIT Configuration
+    -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-bg': '#fafeff',
+                        'custom-text': '#004080',
+                        'custom-text-secondary': '#474747',
+                        'custom-primary': '#004080',
+                    },
+                    boxShadow: {
+                        'beveled': '6px 6px 12px #d4d9de, -6px -6px 12px #ffffff',
+                        'beveled-inset': 'inset 6px 6px 12px #d4d9de, inset -6px -6px 12px #ffffff',
+                        'beveled-sm': '3px 3px 6px #d4d9de, -3px -3px 6px #ffffff',
+                        'beveled-inset-sm': 'inset 3px 3px 6px #d4d9de, inset -3px -3px 6px #ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-custom-bg text-custom-text">
+
+    <!-- Main App Container -->
+    <div class="w-full max-w-2xl mx-auto min-h-screen">
+        
+        <!-- Sticky Header Wrapper - "Liquid Glass" -->
+        <div class="sticky top-0 z-10 bg-custom-bg/80 backdrop-blur-lg shadow-md border-b border-gray-200/50">
+            <!-- Header -->
+            <header class="p-4 pt-6">
+                <h1 class="text-2xl font-extrabold text-custom-text text-center">
+                    Class Schedule
+                </h1>
+            </header>
+
+            <!-- Day of the Week Selector -->
+            <div id="day-selector-container" class="w-full px-4 pb-4">
+                <!-- Day selector buttons will be injected by JS -->
+            </div>
+        </div>
+
+        <!-- Schedule Content -->
+        <main class="p-6">
+            <div id="schedule-view-container">
+                <!-- Class cards will be injected by JS -->
+            </div>
+        </main>
+        
+    </div>
+
+    <!-- Main JavaScript Logic -->
+    <script type="module">
+        // --- Mock Data ---
+        // UPDATED: Removed "(Past)", "(Current)", "(Upcoming)" from subjects
+        const mockSchedule = {
+            Monday: [
+                { id: 1, subject: 'Calculus I', time: '08:00 AM - 09:30 AM', location: 'Bldg 2, Room 405', instructor: 'Prof. A. Santos' },
+                { id: 2, subject: 'Intro to Comp Sci', time: '10:00 AM - 11:30 AM', location: 'CS Lab 1', instructor: 'Dr. R. Gomez' },
+                { id: 3, subject: 'Physical Education 101', time: '02:00 PM - 03:00 PM', location: 'University Gym', instructor: 'Coach M. Reyes' },
+            ],
+            Tuesday: [
+                { id: 4, subject: 'Data Structures', time: '06:00 AM - 7:30 AM', location: 'CS Lab 2', instructor: 'Dr. R. Gomez' },
+                { id: 5, subject: 'World Literature', time: '01:00 PM - 02:30 PM', location: 'Bldg 1, Room 201', instructor: 'Prof. L. Cruz' },
+            ],
+            Wednesday: [
+                { id: 6, subject: 'Calculus I', time: '08:00 AM - 09:30 AM', location: 'Bldg 2, Room 405', instructor: 'Prof. A. Santos' },
+                { id: 7, subject: 'Intro to Comp Sci', time: '10:00 AM - 11:30 AM', location: 'CS Lab 1', instructor: 'Dr. R. Gomez' },
+                { id: 8, subject: 'Life and Works of Rizal', time: '01:00 PM - 02:30 PM', location: 'Bldg 1, Room 202', instructor: 'Dr. J. David' },
+            ],
+            Thursday: [
+                { id: 9, subject: 'Data Structures', time: '09:00 AM - 10:30 AM', location: 'CS Lab 2', instructor: 'Dr. R. Gomez' },
+                { id: 10, subject: 'World Literature', time: '01:00 PM - 02:30 PM', location: 'Bldg 1, Room 201', instructor: 'Prof. L. Cruz' },
+            ],
+            Friday: [
+                { id: 11, subject: 'Understanding the Self', time: '10:00 AM - 12:00 PM', location: 'Bldg 1, Room 202', instructor: 'Prof. E. Garcia' },
+                { id: 12, subject: 'Calculus I (Recitation)', time: '02:00 PM - 03:00 PM', location: 'Bldg 2, Room 405', instructor: 'Prof. A. Santos' },
+            ],
+            Saturday: [
+                { id: 13, subject: 'NSTP Program', time: '08:00 AM - 12:00 PM', location: 'Field / Varies', instructor: 'Mr. B. Pineda' },
+            ],
+            Sunday: [
+                // Times are for demonstration based on a Sunday ~8:45 PM
+                { id: 14, subject: 'Study Group', time: '01:00 PM - 02:00 PM', location: 'Library', instructor: 'N/A' },
+                { id: 15, subject: 'Project Cram Session', time: '08:00 PM - 09:30 PM', location: 'Home', instructor: 'Me' },
+                { id: 16, subject: 'Prepare for Monday', time: '10:00 PM - 11:00 PM', location: 'Home', instructor: 'Me' },
+            ],
+        };
+
+        const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const LOCAL_STORAGE_KEY = 'classScheduleReminders';
+
+        // --- State ---
+        let currentDay = '';
+        let expandedCardId = null;
+        let reminders = {};
+
+        // --- LocalStorage Functions ---
+        const loadReminders = () => {
+            const storedReminders = localStorage.getItem(LOCAL_STORAGE_KEY);
+            reminders = storedReminders ? JSON.parse(storedReminders) : {};
+        };
+
+        const saveReminders = () => {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(reminders));
+        };
+
+        // --- Icon "Components" ---
+        const IconClock = (className = "w-5 h-5") => `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </svg>`;
+
+        const IconMapPin = (className = "w-5 h-5") => `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+            </svg>`;
+
+        const IconUser = (className = "w-5 h-5") => `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>`;
+
+        const IconCalendar = (className = "w-6 h-6") => `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>`;
+
+        
+        // --- Time Helper Functions ---
+
+        /**
+         * Gets the current time in Philippines (PHT / UTC+8)
+         * We assume the user's device clock is set to PHT (Philippines time).
+         * If not, this logic adjusts from UTC.
+         * @returns {Date} A Date object set to PHT
+         */
+        const getPhtTime = () => {
+            const now = new Date();
+            // Check if user's local timezone is already PHT (UTC+8)
+            // Timezone offset is in minutes, and it's inverted (e.g., UTC+8 is -480)
+            if (now.getTimezoneOffset() === -480) {
+                return now; // User is already in PHT
+            }
+            // If not, convert from local to PHT
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const phtOffset = 8 * 60 * 60000; // 8 hours
+            return new Date(utc + phtOffset);
+        };
+
+        /**
+         * Gets the day string (e.g., "Monday") from a Date object
+         * @param {Date} date
+         * @returns {string}
+         */
+        const getDayStringFromDate = (date) => {
+            const todayIndex = date.getDay();
+            // JS Date().getDay() has Sunday as 0, adjust for our array (Mon=0...Sun=6)
+            const adjustedIndex = (todayIndex === 0) ? 6 : todayIndex - 1;
+            return daysOfWeek[adjustedIndex] || 'Monday';
+        };
+
+        /**
+         * Checks if a class is past, current, or upcoming
+         * @param {object} classInfo
+         * @param {Date} nowPHT
+         * @param {string} todayString
+         * @returns {string} 'past', 'current', or 'upcoming'
+         */
+        const getClassTimeState = (classInfo, nowPHT, todayString) => {
+            // Only apply states if we are viewing "today"
+            if (currentDay !== todayString) {
+                return 'upcoming';
+            }
+
+            // Helper to parse time strings like "08:00 AM"
+            const parseTime = (timeStr) => {
+                const date = new Date(nowPHT);
+                const [time, modifier] = timeStr.split(' ');
+                let [hours, minutes] = time.split(':').map(Number);
+                
+                if (modifier === 'PM' && hours !== 12) hours += 12;
+                if (modifier === 'AM' && hours === 12) hours = 0; // 12 AM is 00:00
+                
+                date.setHours(hours, minutes, 0, 0);
+                return date;
+            };
+
+            try {
+                const [startTimeStr, endTimeStr] = classInfo.time.split(' - ');
+                const startTime = parseTime(startTimeStr);
+                const endTime = parseTime(endTimeStr);
+
+                if (nowPHT > endTime) return 'past';
+                if (nowPHT >= startTime && nowPHT <= endTime) return 'current';
+                return 'upcoming';
+
+            } catch (e) {
+                console.error("Error parsing time:", classInfo.time, e);
+                return 'upcoming'; // Default to upcoming if time format is wrong
+            }
+        };
+
+
+        // --- UI Rendering Functions ---
+
+        /**
+         * Renders a single class card - with state-based styling
+         * @param {object} classInfo
+         * @param {Date} nowPHT
+         * @param {string} todayString
+         * @returns {string} HTML string for the card
+         */
+        const renderClassCard = (classInfo, nowPHT, todayString) => {
+            const { id, subject, time, location, instructor } = classInfo;
+            const isExpanded = expandedCardId === id;
+            const reminderText = reminders[id] || '';
+
+            // Determine whether the selected day is today, past, or future
+            const selectedIndex = daysOfWeek.indexOf(currentDay);
+            const todayIndex = daysOfWeek.indexOf(todayString);
+            let dayRelation = 'future'; // 'past', 'today', 'future'
+            if (selectedIndex === todayIndex) {
+                dayRelation = 'today';
+            } else if (selectedIndex < todayIndex) {
+                dayRelation = 'past';
+            } else {
+                dayRelation = 'future';
+            }
+
+            // Determine class time state
+            // If viewing today, use precise time-based state; otherwise map by dayRelation
+            let state;
+            if (dayRelation === 'today') {
+                state = getClassTimeState(classInfo, nowPHT, todayString); // 'past'|'current'|'upcoming'
+            } else if (dayRelation === 'past') {
+                state = 'past';
+            } else {
+                state = 'future';
+            }
+
+            // Define base classes
+            let wrapperClasses = 'class-card-wrapper rounded-2xl transition-all duration-300 ease-in-out ';
+            let innerClasses = 'class-card p-5 rounded-l-2xl cursor-pointer ';
+            let titleClasses = 'text-xl font-bold mb-3 ';
+            let textClasses = 'space-y-2 ';
+            let iconClasses = '';
+
+            // Apply background/highlight rules:
+            // today & upcoming -> yellow
+            // today & current  -> green
+            // past (today or earlier) -> gray
+            // future (later in week) -> white
+            switch (state) {
+                case 'past':
+                    wrapperClasses += 'bg-gray-100 border border-gray-200';
+                    titleClasses += 'text-gray-500';
+                    textClasses += 'text-gray-400';
+                    iconClasses = 'text-gray-400';
+                    break;
+                case 'current':
+                    wrapperClasses += 'bg-green-50 border border-green-200 shadow-beveled';
+                    titleClasses += 'text-green-800';
+                    textClasses += 'text-custom-text-secondary';
+                    iconClasses = 'text-green-600';
+                    break;
+                case 'upcoming':
+                    // This state only occurs when dayRelation === 'today'
+                    wrapperClasses += 'bg-yellow-50 border border-yellow-300';
+                    titleClasses += 'text-custom-text';
+                    textClasses += 'text-custom-text-secondary';
+                    iconClasses = 'text-yellow-600';
+                    break;
+                case 'future':
+                    // Future day (not today)
+                    wrapperClasses += 'bg-white border border-blue-100';
+                    titleClasses += 'text-custom-text';
+                    textClasses += 'text-custom-text-secondary';
+                    iconClasses = 'text-custom-primary/70';
+                    break;
+                default:
+                    wrapperClasses += 'bg-white border border-blue-100';
+                    titleClasses += 'text-custom-text';
+                    textClasses += 'text-custom-text-secondary';
+                    iconClasses = 'text-custom-primary/70';
+            }
+
+            return `
+                <div class="${wrapperClasses}">
+                    <div 
+                        class="${innerClasses}"
+                        data-class-id="${id}"
+                    >
+                        <h3 class="${titleClasses}">${subject}</h3>
+                        <div class="${textClasses}">
+                            <div class="flex items-center space-x-3">
+                                ${IconClock(`w-5 h-5 ${iconClasses}`)}
+                                <span>${time}</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${IconMapPin(`w-5 h-5 ${iconClasses}`)}
+                                <span>${location}</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${IconUser(`w-5 h-5 ${iconClasses}`)}
+                                <span>${instructor}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded Section (unchanged) -->
+                    <div 
+                        class="expandable-content overflow-hidden transition-all duration-300 ease-in-out"
+                        style="max-height: ${isExpanded ? '500px' : '0'}"
+                    >
+                        <div class="px-5 pb-5 pt-2">
+                            <label for="reminder-${id}" class="block text-sm font-medium text-custom-text-secondary mb-2">
+                                Reminders
+                            </label>
+                            <textarea 
+                                id="reminder-${id}" 
+                                rows="4"
+                                class="w-full p-3 rounded-lg border-none shadow-beveled-inset text-custom-text-secondary bg-custom-bg focus:outline-none focus:ring-2 focus:ring-custom-primary"
+                                placeholder="Type your reminders here..."
+                            >${reminderText}</textarea>
+                            
+                            <button 
+                                data-class-id="${id}"
+                                class="save-btn mt-3 w-full py-2 px-4 rounded-full font-semibold text-white bg-custom-primary shadow-beveled-sm hover:bg-custom-primary/80 transition-all"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        };
+
+
+        /**
+         * Renders the list of classes for the selected day
+         * @param {Array} classes
+         * @param {Date} nowPHT
+         * @param {string} todayString
+         * @returns {string} HTML string for the schedule view
+         */
+        const renderScheduleView = (classes, nowPHT, todayString) => {
+            if (classes.length === 0) {
+                return `
+                    <div class="flex flex-col items-center justify-center h-64 text-custom-text-secondary/70 text-center p-4">
+                        ${IconCalendar("w-12 h-12 mb-4")}
+                        <h3 class="text-xl font-semibold">No classes today!</h3>
+                        <p>Enjoy your free day.</p>
+                    </div>`;
+            }
+            return `
+                <div class="space-y-6">
+                    ${classes.map(classInfo => renderClassCard(classInfo, nowPHT, todayString)).join('')}
+                </div>`;
+        };
+
+        /**
+         * Renders the day selector grid
+         * @param {string} selectedDay
+         * @returns {string} HTML string for the day selector
+         */
+        const renderDaySelector = (selectedDay) => {
+            const renderButton = (day) => {
+                const isActive = day === selectedDay;
+                const activeClass = 'bg-custom-primary text-white';
+                const inactiveClass = 'bg-custom-bg text-custom-text-secondary hover:scale-105';
+                const letter = (day === 'Thursday') ? 'H' : day.charAt(0);
+                return `
+                    <button
+                        data-day="${day}"
+                        class="day-btn w-12 h-12 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-200 ease-in-out ${isActive ? activeClass : inactiveClass}"
+                    >
+                        ${letter}
+                    </button>`;
+            };
+
+            const selectorDays = daysOfWeek.slice(0, 6); // Monday - Saturday (remove Sunday)
+
+            return `
+                <div class="flex items-center justify-center gap-3 mb-3 px-4">
+                    ${selectorDays.map(renderButton).join('')}
+                </div>
+            `;
+        };
+
+        /**
+         * Main render function to update the entire UI
+         */
+        const renderApp = () => {
+            // Get the current PHT time and day string *every time* we render
+            const nowPHT = getPhtTime();
+            const todayString = getDayStringFromDate(nowPHT);
+            
+            const classesForDay = mockSchedule[currentDay] || [];
+            
+            const daySelectorContainer = document.getElementById('day-selector-container');
+            const scheduleViewContainer = document.getElementById('schedule-view-container');
+            // const currentDayElement = document.getElementById('current-day');
+            
+            // Update the UI
+            // currentDayElement.textContent = currentDay;
+            daySelectorContainer.innerHTML = renderDaySelector(currentDay);
+            // Pass the time-based info to the render functions
+            scheduleViewContainer.innerHTML = renderScheduleView(classesForDay, nowPHT, todayString);
+        };
+
+        /**
+         * Handles clicks on the day selector buttons
+         */
+        const onDaySelect = (e) => {
+            const button = e.target.closest('.day-btn');
+            if (button) {
+                const day = button.dataset.day;
+                if (day && day !== currentDay) {
+                    currentDay = day;
+                    expandedCardId = null; 
+                    renderApp(); // Re-render
+                }
+            }
+        };
+        
+        /**
+         * Handles clicks within the schedule view
+         */
+        const onCardClick = (e) => {
+            const card = e.target.closest('.class-card');
+            const saveButton = e.target.closest('.save-btn');
+
+            if (saveButton) {
+                // --- Handle Save Button Click ---
+                const classId = parseInt(saveButton.dataset.classId);
+                const textarea = document.getElementById(`reminder-${classId}`);
+                reminders[classId] = textarea.value;
+                saveReminders();
+                expandedCardId = null; // Collapse card
+                renderApp();
+                
+            } else if (card) {
+                // --- Handle Card Click (to expand/collapse) ---
+                const classId = parseInt(card.dataset.classId);
+                const isOpening = expandedCardId !== classId; 
+                
+                expandedCardId = (expandedCardId === classId) ? null : classId;
+                renderApp(); // Re-render
+                
+                // Scroll to center if we are opening a card
+                if (isOpening) {
+                    setTimeout(() => {
+                        const cardWrapper = card.closest('.class-card-wrapper');
+                        if (cardWrapper) {
+                            cardWrapper.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                        }
+                    }, 50); 
+                }
+            }
+        };
+
+        /**
+         * Initializes the application
+         */
+        const init = () => {
+            loadReminders(); // Load from localStorage
+            
+            // Get initial time and day
+            const nowPHT = getPhtTime();
+            const todayString = getDayStringFromDate(nowPHT);
+            currentDay = todayString; // Set the app to show "today" by default
+            
+            expandedCardId = null;
+            
+            // Add event listeners
+            const daySelectorContainer = document.getElementById('day-selector-container');
+            daySelectorContainer.addEventListener('click', onDaySelect);
+            
+            const scheduleViewContainer = document.getElementById('schedule-view-container');
+            scheduleViewContainer.addEventListener('click', onCardClick);
+            
+            // Perform the initial render
+            renderApp();
+        };
+
+        // --- App Entry Point ---
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
+
+
