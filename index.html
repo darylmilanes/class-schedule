@@ -60,10 +60,6 @@
         .mode-modal .buttons { display:flex; gap:0.75rem; margin-top:0.75rem; justify-content:center; }
         .mode-modal .key-row { margin-top:0.75rem; display:none; gap:0.5rem; align-items:center; justify-content:center; }
 
-        /* Blur effect applied to the main app while modal is open */
-        #app-root { transition: filter 0.25s ease, transform 0.25s ease; }
-        #app-root.blurred { filter: blur(6px) brightness(0.95); transform: scale(0.998); pointer-events: none; user-select: none; }
-
     </style>
     <!--
     Tailwind JIT Configuration
@@ -111,7 +107,7 @@
     </div>
 
     <!-- Main App Container -->
-    <div id="app-root" class="w-full max-w-2xl mx-auto min-h-screen">
+    <div class="w-full max-w-2xl mx-auto min-h-screen">
         
         <!-- Sticky Header Wrapper - "Liquid Glass" -->
         <div class="sticky top-0 z-10 bg-custom-bg/80 backdrop-blur-lg shadow-md border-b border-gray-200/50">
@@ -568,18 +564,20 @@
         const openModeModal = () => {
             const backdrop = document.getElementById('mode-modal-backdrop');
             backdrop.style.display = 'flex';
-            const appRoot = document.getElementById('app-root');
-            if (appRoot) appRoot.classList.add('blurred');
-            // Lock page scrolling while modal is open
-            document.body.style.overflow = 'hidden';
         };
         const closeModeModal = () => {
             const backdrop = document.getElementById('mode-modal-backdrop');
             backdrop.style.display = 'none';
-            const appRoot = document.getElementById('app-root');
-            if (appRoot) appRoot.classList.remove('blurred');
-            // Restore scrolling
-            document.body.style.overflow = '';
+        };
+
+        // Scroll schedule container to just below the sticky header
+        const scrollToScheduleStart = () => {
+            const headerWrapper = document.querySelector('.sticky');
+            const schedule = document.getElementById('schedule-view-container');
+            if (!schedule) return;
+            const headerHeight = headerWrapper ? headerWrapper.offsetHeight : 0;
+            const targetY = schedule.getBoundingClientRect().top + window.pageYOffset - headerHeight - 8; // small gap
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
         };
 
         const selectViewMode = () => {
@@ -592,18 +590,9 @@
         const attemptEditMode = () => {
             const keyInputRow = document.getElementById('mode-key-row');
             const errorEl = document.getElementById('mode-error');
-            // Show the key input row to allow entering key
+            // Show the key input row to allow entering key (pre-filled with default)
             keyInputRow.style.display = 'flex';
             errorEl.style.display = 'none';
-            // Focus the input so mobile keyboards pop up
-            const keyInput = document.getElementById('mode-key-input');
-            if (keyInput) {
-                // small timeout to ensure element is visible before focusing
-                setTimeout(() => {
-                    keyInput.focus();
-                    keyInput.select();
-                }, 50);
-            }
         };
 
         const confirmEditKey = () => {
@@ -612,24 +601,14 @@
             const entered = (keyInput && keyInput.value) ? keyInput.value.trim() : '';
             const DEFAULT_KEY = '9000';
             if (entered === DEFAULT_KEY) {
-                // correct key: blur input to hide mobile keyboard, then close modal
-                if (keyInput) {
-                    keyInput.blur();
-                }
-                try { if (document.activeElement) document.activeElement.blur(); } catch(e){}
-                 mode = 'edit';
-                 closeModeModal();
-                 renderApp();
+                mode = 'edit';
+                closeModeModal();
+                renderApp();
+                // After rendering, ensure schedule is positioned below the sticky header
+                setTimeout(() => { scrollToScheduleStart(); }, 60);
             } else {
-                // incorrect: show error and keep focus (keyboard visible)
                 errorEl.style.display = 'block';
-                if (keyInput) {
-                    setTimeout(() => {
-                        keyInput.focus();
-                        keyInput.select();
-                    }, 50);
-                }
-             }
+            }
         };
 
         /**
@@ -660,17 +639,6 @@
             viewBtn.addEventListener('click', selectViewMode);
             editBtn.addEventListener('click', attemptEditMode);
             keyConfirm.addEventListener('click', confirmEditKey);
-
-            // allow Enter key to submit the password without hiding keyboard on wrong input
-            const keyInput = document.getElementById('mode-key-input');
-            if (keyInput) {
-                keyInput.addEventListener('keydown', (ev) => {
-                    if (ev.key === 'Enter') {
-                        ev.preventDefault();
-                        confirmEditKey();
-                    }
-                });
-            }
 
             // Show modal on load
             openModeModal();
