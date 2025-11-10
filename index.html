@@ -55,9 +55,14 @@
             width: 100%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.08);
             border: 1px solid rgba(0,0,0,0.06);
+            text-align: center; /* center text inside modal */
         }
-        .mode-modal .buttons { display:flex; gap:0.75rem; margin-top:0.75rem; }
-        .mode-modal .key-row { margin-top:0.75rem; display:none; gap:0.5rem; align-items:center; }
+        .mode-modal .buttons { display:flex; gap:0.75rem; margin-top:0.75rem; justify-content:center; }
+        .mode-modal .key-row { margin-top:0.75rem; display:none; gap:0.5rem; align-items:center; justify-content:center; }
+
+        /* Blur effect applied to the main app while modal is open */
+        #app-root { transition: filter 0.25s ease, transform 0.25s ease; }
+        #app-root.blurred { filter: blur(6px) brightness(0.95); transform: scale(0.998); pointer-events: none; user-select: none; }
 
     </style>
     <!--
@@ -89,8 +94,8 @@
     <!-- Startup Mode Modal (View / Edit) -->
     <div id="mode-modal-backdrop" class="mode-modal-backdrop" style="display:none;">
         <div class="mode-modal">
-            <h2 class="text-lg font-bold">How would you like to open the schedule?</h2>
-            <p class="text-sm text-custom-text-secondary mt-2">Choose View to browse only. Choose Edit to enable reminders and editing (requires a key).</p>
+            <h2 class="text-lg font-bold">You're accessing my class schedule.</h2>
+            <p class="text-sm text-custom-text-secondary mt-2">Choose View to browse only.</p>
             <div class="buttons">
                 <button id="mode-view-btn" class="py-2 px-4 rounded-full bg-gray-100 text-custom-text-secondary font-semibold">View</button>
                 <button id="mode-edit-btn" class="py-2 px-4 rounded-full bg-custom-primary text-white font-semibold">Edit</button>
@@ -106,7 +111,7 @@
     </div>
 
     <!-- Main App Container -->
-    <div class="w-full max-w-2xl mx-auto min-h-screen">
+    <div id="app-root" class="w-full max-w-2xl mx-auto min-h-screen">
         
         <!-- Sticky Header Wrapper - "Liquid Glass" -->
         <div class="sticky top-0 z-10 bg-custom-bg/80 backdrop-blur-lg shadow-md border-b border-gray-200/50">
@@ -563,10 +568,18 @@
         const openModeModal = () => {
             const backdrop = document.getElementById('mode-modal-backdrop');
             backdrop.style.display = 'flex';
+            const appRoot = document.getElementById('app-root');
+            if (appRoot) appRoot.classList.add('blurred');
+            // Lock page scrolling while modal is open
+            document.body.style.overflow = 'hidden';
         };
         const closeModeModal = () => {
             const backdrop = document.getElementById('mode-modal-backdrop');
             backdrop.style.display = 'none';
+            const appRoot = document.getElementById('app-root');
+            if (appRoot) appRoot.classList.remove('blurred');
+            // Restore scrolling
+            document.body.style.overflow = '';
         };
 
         const selectViewMode = () => {
@@ -579,9 +592,18 @@
         const attemptEditMode = () => {
             const keyInputRow = document.getElementById('mode-key-row');
             const errorEl = document.getElementById('mode-error');
-            // Show the key input row to allow entering key (pre-filled with default)
+            // Show the key input row to allow entering key
             keyInputRow.style.display = 'flex';
             errorEl.style.display = 'none';
+            // Focus the input so mobile keyboards pop up
+            const keyInput = document.getElementById('mode-key-input');
+            if (keyInput) {
+                // small timeout to ensure element is visible before focusing
+                setTimeout(() => {
+                    keyInput.focus();
+                    keyInput.select();
+                }, 50);
+            }
         };
 
         const confirmEditKey = () => {
@@ -590,12 +612,24 @@
             const entered = (keyInput && keyInput.value) ? keyInput.value.trim() : '';
             const DEFAULT_KEY = '9000';
             if (entered === DEFAULT_KEY) {
-                mode = 'edit';
-                closeModeModal();
-                renderApp();
+                // correct key: blur input to hide mobile keyboard, then close modal
+                if (keyInput) {
+                    keyInput.blur();
+                }
+                try { if (document.activeElement) document.activeElement.blur(); } catch(e){}
+                 mode = 'edit';
+                 closeModeModal();
+                 renderApp();
             } else {
+                // incorrect: show error and keep focus (keyboard visible)
                 errorEl.style.display = 'block';
-            }
+                if (keyInput) {
+                    setTimeout(() => {
+                        keyInput.focus();
+                        keyInput.select();
+                    }, 50);
+                }
+             }
         };
 
         /**
@@ -626,6 +660,17 @@
             viewBtn.addEventListener('click', selectViewMode);
             editBtn.addEventListener('click', attemptEditMode);
             keyConfirm.addEventListener('click', confirmEditKey);
+
+            // allow Enter key to submit the password without hiding keyboard on wrong input
+            const keyInput = document.getElementById('mode-key-input');
+            if (keyInput) {
+                keyInput.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        confirmEditKey();
+                    }
+                });
+            }
 
             // Show modal on load
             openModeModal();
